@@ -1,0 +1,67 @@
+{
+  "name": "cusage",
+  "displayName": "Claude Usage",
+  "description": "Real-time Claude Code usage tracking — cost, tokens, and live quota in your status bar and a beautiful dashboard.",
+  "version": "1.0.0",
+  "publisher": "cusage",
+  "author": {
+    "name": "Ajax"
+  },
+  "license": "MIT",
+  "homepage": "https://github.com/ajax/cusage#readme",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ajax/cusage.git"
+  },
+  "bugs": {
+    "url": "https://github.com/ajax/cusage/issues"
+  },
+  "keywords": [
+    "claude",
+    "anthropic",
+    "ai",
+    "usage",
+    "cost",
+    "tokens",
+    "quota",
+    "billing",
+    "claude-code",
+    "productivity"
+  ],
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "icon": "media/icon.png",
+  "galleryBanner": {
+    "color": "#0f0f11",
+    "theme": "dark"
+  },
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "cusage.openPanel",
+        "title": "Claude Usage: Open Dashboard",
+        "icon": "$(graph)"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "package": "vsce package",
+    "publish": "vsce publish"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/vscode": "^1.85.0",
+    "typescript": "^5.3.0"
+  }
+}

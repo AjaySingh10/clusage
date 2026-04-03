@@ -1,0 +1,87 @@
+import * as https from 'https';
+import * as fs from 'fs';
+import * as path from 'path';
+import * as os from 'os';
+
+export interface QuotaData {
+  fiveHourUtilization: number;   // 0.0 – 1.0
+  fiveHourResetAt: Date;
+  sevenDayUtilization: number;   // 0.0 – 1.0
+  sevenDayResetAt: Date;
+  overallStatus: 'allowed' | 'blocked' | 'unknown';
+  fetchedAt: Date;
+}
+
+interface Credentials {
+  claudeAiOauth?: {
+    accessToken?: string;
+    refreshToken?: string;
+    expiresAt?: number;
+  };
+}
+
+function readToken(): string | null {
+  try {
+    const credPath = path.join(os.homedir(), '.claude', '.credentials.json');
+    const raw = fs.readFileSync(credPath, 'utf8');
+    const creds: Credentials = JSON.parse(raw);
+    return creds.claudeAiOauth?.accessToken ?? null;
+  } catch {
+    return null;
+  }
+}
+
+export async function fetchQuota(): Promise<QuotaData | null> {
+  const token = readToken();
+  if (!token) return null;
+
+  return new Promise(resolve => {
+    const body = JSON.stringify({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 1,
+      messages: [{ role: 'user', content: '.' }],
+    });
+
+    const req = https.request(
+      {
+        hostname: 'api.anthropic.com',
+        path: '/v1/messages',
+        method: 'POST',
+        headers: {
+          'x-api-key': token,
+          'anthropic-version': '2023-06-01',
+          'anthropic-client-platform': 'claude_cli',
+          'content-type': 'application/json',
+          'content-length': Buffer.byteLength(body),
+        },
+      },
+      res => {
+        const h = res.headers as Record<string, string>;
+        res.resume(); // drain body
+
+        const parse5hReset = h['anthropic-ratelimit-unified-5h-reset'];
+        const parse7dReset = h['anthropic-ratelimit-unified-7d-reset'];
+
+        const fiveHourUtilization = parseFloat(h['anthropic-ratelimit-unified-5h-utilization'] ?? '0') || 0;
+        const sevenDayUtilization = parseFloat(h['anthropic-ratelimit-unified-7d-utilization'] ?? '0') || 0;
+        const fiveHourResetAt = parse5hReset ? new Date(parseInt(parse5hReset, 10) * 1000) : new Date(Date.now() + 5 * 3600_000);
+        const sevenDayResetAt = parse7dReset ? new Date(parseInt(parse7dReset, 10) * 1000) : new Date(Date.now() + 7 * 86400_000);
+        const status = h['anthropic-ratelimit-unified-status'];
+
+        resolve({
+          fiveHourUtilization,
+          fiveHourResetAt,
+          sevenDayUtilization,
+          sevenDayResetAt,
+          overallStatus: status === 'blocked' ? 'blocked' : status === 'allowed' ? 'allowed' : 'unknown',
+          fetchedAt: new Date(),
+        });
+      }
+    );
+
+    req.on('error', () => resolve(null));
+    req.setTimeout(10_000, () => { req.destroy(); resolve(null); });
+    req.write(body);
+    req.end();
+  });
+}
