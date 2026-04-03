@@ -22,12 +22,31 @@ async function refreshUsage(): Promise<void> {
   }
 }
 
+let resetRefreshTimer: ReturnType<typeof setTimeout> | undefined;
+
 async function refreshQuota(): Promise<void> {
   try {
     lastQuota = await fetchQuota();
     if (lastSummary) {
       statusBar?.update(lastSummary, lastQuota);
       refreshDashboard(lastSummary, lastQuota);
+    }
+
+    // Schedule an automatic re-fetch right after whichever reset is soonest,
+    // so the UI clears itself the moment the quota window rolls over.
+    if (resetRefreshTimer) clearTimeout(resetRefreshTimer);
+    if (lastQuota) {
+      const now = Date.now();
+      const candidates = [
+        lastQuota.fiveHourResetAt.getTime(),
+        lastQuota.sevenDayResetAt.getTime(),
+      ].filter(t => t > now);
+
+      if (candidates.length > 0) {
+        const nextReset = Math.min(...candidates);
+        const delay = nextReset - now + 2000; // 2 s buffer after the reset
+        resetRefreshTimer = setTimeout(() => refreshQuota(), delay);
+      }
     }
   } catch (err) {
     console.error('[cusage] quota refresh error:', err);

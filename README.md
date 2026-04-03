@@ -1,14 +1,14 @@
 <div align="center">
 
-<img src="media/icon.png" width="128" height="128" alt="Claude Usage icon"/>
+<img src="https://raw.githubusercontent.com/AjaySingh10/cusage/main/media/icon.png" width="128" height="128" alt="Claude Usage icon"/>
 
-# Claude Usage
+# Clusage - Claude Usage Tracker
 
 **Real-time cost, token & quota tracking for Claude Code — directly in VS Code.**
 
 Track every dollar, token, and quota percentage across all your Claude Code sessions without leaving your editor.
 
-[![Version](https://img.shields.io/badge/version-1.0.0-7c6af7?style=flat-square)](https://marketplace.visualstudio.com/items?itemName=cusage.cusage)
+[![Version](https://img.shields.io/badge/version-1.0.2-7c6af7?style=flat-square)](https://marketplace.visualstudio.com/items?itemName=cusage.cusage)
 [![VS Code](https://img.shields.io/badge/VS%20Code-1.85+-5eead4?style=flat-square)](https://marketplace.visualstudio.com/items?itemName=cusage.cusage)
 [![License](https://img.shields.io/badge/license-MIT-4ade80?style=flat-square)](LICENSE)
 
@@ -45,6 +45,8 @@ The status bar item updates in real time as you use Claude Code:
 
 **Hover** over the item for a detailed breakdown table. **Click** to open the full dashboard.
 
+![Tooltip preview](https://raw.githubusercontent.com/AjaySingh10/cusage/main/media/tooltip.png)
+
 ---
 
 ## 📋 Dashboard
@@ -54,6 +56,9 @@ Open with a click on the status bar item or via the Command Palette:
 > **Claude Usage: Open Dashboard** (`Ctrl+Shift+P`)
 
 The dashboard is a beautiful dark-themed panel with six sections:
+
+![Dashboard preview](https://raw.githubusercontent.com/AjaySingh10/cusage/main/media/dashboard.png) 
+![Dashboard preview](https://raw.githubusercontent.com/AjaySingh10/cusage/main/media/dashboard2.png) 
 
 ---
 
@@ -236,9 +241,3 @@ Please open issues at [github.com/ajax/cusage/issues](https://github.com/ajax/cu
 [MIT](LICENSE) © 2026 Ajax
 
 ---
-
-<div align="center">
-
-Built for [Claude Code](https://claude.ai/code) · Not affiliated with Anthropic
-
-</div>

@@ -19,6 +19,7 @@ export class StatusBarController {
   update(summary: UsageSummary, quota: QuotaData | null): void {
     const cost = formatCost(summary.todayCost);
     const fmtPct = (v: number) =>
+      v > 1      ? 'maxed' :
       v < 0.0005 ? '0%' :
       v < 0.001  ? '<0.1%' :
       v < 0.1    ? `${(v * 100).toFixed(1)}%` :

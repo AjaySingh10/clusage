@@ -1,26 +1,34 @@
 # Changelog
 
-## [1.0.0] — 2026-04-03
-
-### Added
-- Professional marketplace icon featuring Claude AI sparkle mark
-- Full README with feature documentation, pricing reference, and privacy policy
-
-### Changed
-- Status bar tooltip reformatted as aligned Markdown tables
-- Fixed "Quotasa" typo → "Quota" in tooltip
-- Version bumped to 1.0.0 for initial marketplace release
-
----
-
-
 All notable changes to **Claude Usage** will be documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
-## [0.1.1] — 2026-04-03
+## [1.0.2] — 2026-04-03
+
+### Changed
+- README images updated to absolute GitHub raw URLs so they render correctly on the VS Code Marketplace page
+- Added dashboard screenshot to README
+
+---
+
+## [1.0.1] — 2026-04-03
+
+### Fixed
+- **Quota auto-reset** — extension now schedules a refresh exactly 2 seconds after each quota window resets, so the UI clears itself immediately instead of waiting up to 5 minutes
+- **429 handling** — when the API returns 429 with no rate-limit headers, quota is correctly marked as "Limit reached" with a red bar rather than silently showing `< 0.1%`
+- **Bar overflow** — quota progress bar is now capped at 100% width; over-limit state shows "Limit reached" label in red
+- **Status bar over-limit** — status bar now shows `5h:maxed` instead of a percentage above 100%
+
+---
+
+## [1.0.0] — 2026-04-03
+
+### Added
+- Professional marketplace icon featuring Claude AI sparkle mark
+- Full README with feature documentation, pricing reference, and privacy policy
 
 ### Fixed
 - **Accurate cost calculation** — intermediate streaming messages (`stop_reason: null`) were being counted alongside final messages, inflating costs by ~1.5–2×. Only final messages are now counted.
@@ -29,7 +37,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and
 ### Changed
 - Status bar now shows live session and weekly quota percentages instead of token count: `$(graph) $3.70  5h:46%  7d:6%`
 - Status bar icon changed from `$(hubot)` to `$(graph)`
-- Hover tooltip reformatted as a Markdown table with quota reset times
+- Hover tooltip reformatted as aligned Markdown tables with quota reset times
 
 ---
 

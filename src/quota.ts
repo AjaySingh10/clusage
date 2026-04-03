@@ -4,27 +4,23 @@ import * as path from 'path';
 import * as os from 'os';
 
 export interface QuotaData {
-  fiveHourUtilization: number;   // 0.0 – 1.0
+  fiveHourUtilization: number;   // 0.0 – 1.0  (>1.0 means over limit)
   fiveHourResetAt: Date;
-  sevenDayUtilization: number;   // 0.0 – 1.0
+  sevenDayUtilization: number;
   sevenDayResetAt: Date;
   overallStatus: 'allowed' | 'blocked' | 'unknown';
+  headersPresent: boolean;       // false = 429 with no headers, utilization inferred
   fetchedAt: Date;
 }
 
 interface Credentials {
-  claudeAiOauth?: {
-    accessToken?: string;
-    refreshToken?: string;
-    expiresAt?: number;
-  };
+  claudeAiOauth?: { accessToken?: string };
 }
 
 function readToken(): string | null {
   try {
     const credPath = path.join(os.homedir(), '.claude', '.credentials.json');
-    const raw = fs.readFileSync(credPath, 'utf8');
-    const creds: Credentials = JSON.parse(raw);
+    const creds: Credentials = JSON.parse(fs.readFileSync(credPath, 'utf8'));
     return creds.claudeAiOauth?.accessToken ?? null;
   } catch {
     return null;
@@ -57,15 +53,35 @@ export async function fetchQuota(): Promise<QuotaData | null> {
       },
       res => {
         const h = res.headers as Record<string, string>;
-        res.resume(); // drain body
+        res.resume();
 
         const parse5hReset = h['anthropic-ratelimit-unified-5h-reset'];
         const parse7dReset = h['anthropic-ratelimit-unified-7d-reset'];
+        const headersPresent = Boolean(parse5hReset || h['anthropic-ratelimit-unified-5h-utilization']);
+
+        const fiveHourResetAt  = parse5hReset
+          ? new Date(parseInt(parse5hReset, 10) * 1000)
+          : new Date(Date.now() + 5 * 3600_000);
+        const sevenDayResetAt = parse7dReset
+          ? new Date(parseInt(parse7dReset, 10) * 1000)
+          : new Date(Date.now() + 7 * 86400_000);
+
+        // 429 with no headers = quota exhausted / hard rate-limited
+        if (res.statusCode === 429 && !headersPresent) {
+          resolve({
+            fiveHourUtilization: 1.0,
+            fiveHourResetAt,
+            sevenDayUtilization: 1.0,
+            sevenDayResetAt,
+            overallStatus: 'blocked',
+            headersPresent: false,
+            fetchedAt: new Date(),
+          });
+          return;
+        }
 
         const fiveHourUtilization = parseFloat(h['anthropic-ratelimit-unified-5h-utilization'] ?? '0') || 0;
         const sevenDayUtilization = parseFloat(h['anthropic-ratelimit-unified-7d-utilization'] ?? '0') || 0;
-        const fiveHourResetAt = parse5hReset ? new Date(parseInt(parse5hReset, 10) * 1000) : new Date(Date.now() + 5 * 3600_000);
-        const sevenDayResetAt = parse7dReset ? new Date(parseInt(parse7dReset, 10) * 1000) : new Date(Date.now() + 7 * 86400_000);
         const status = h['anthropic-ratelimit-unified-status'];
 
         resolve({
@@ -74,6 +90,7 @@ export async function fetchQuota(): Promise<QuotaData | null> {
           sevenDayUtilization,
           sevenDayResetAt,
           overallStatus: status === 'blocked' ? 'blocked' : status === 'allowed' ? 'allowed' : 'unknown',
+          headersPresent,
           fetchedAt: new Date(),
         });
       }

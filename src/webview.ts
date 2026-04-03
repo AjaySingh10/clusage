@@ -654,22 +654,30 @@ function liveQuotaCard(
   const rawPct = utilization !== null ? utilization * 100 : null;
   const statusClass = rawPct === null ? 'ok' : rawPct >= 90 ? 'danger' : rawPct >= 70 ? 'warn' : 'ok';
 
-  // Display label: show one decimal when < 10%, integer otherwise
-  const pctLabel = rawPct === null
+  // Display label: cap display at 100%, show one decimal when < 10%
+  const displayPct = rawPct !== null ? Math.min(rawPct, 100) : null;
+  const pctLabel = displayPct === null
     ? `<span class="muted">—</span>`
-    : rawPct < 0.05
-      ? `<span class="quota-pct ok">&lt; 0.1% used</span>`
-      : rawPct < 10
-        ? `<span class="quota-pct ${statusClass}">${rawPct.toFixed(1)}% used</span>`
-        : `<span class="quota-pct ${statusClass}">${Math.round(rawPct)}% used</span>`;
+    : rawPct! > 100
+      ? `<span class="quota-pct danger">Limit reached</span>`
+      : displayPct < 0.05
+        ? `<span class="quota-pct ok">&lt; 0.1% used</span>`
+        : displayPct < 10
+          ? `<span class="quota-pct ${statusClass}">${displayPct.toFixed(1)}% used</span>`
+          : `<span class="quota-pct ${statusClass}">${Math.round(displayPct)}% used</span>`;
 
-  // Bar: minimum 0.5% width so it's always visible when utilization > 0
-  const barWidth = rawPct !== null ? Math.max(rawPct, rawPct > 0 ? 0.5 : 0) : 0;
+  // Bar: capped at 100%, minimum 0.5px when any usage exists
+  const barWidth = rawPct !== null ? Math.min(Math.max(rawPct, rawPct > 0 ? 0.5 : 0), 100) : 0;
   const bar = `<div class="quota-track"><div class="quota-fill ${statusClass}" style="width:${barWidth}%"></div></div>`;
 
   const resetLine = resetAt
     ? `<span>Resets ${timeUntil(resetAt)}</span>`
     : `<span class="muted">Fetching…</span>`;
+
+  // If utilisation came from a 429 (no actual headers), add a note
+  const inferredNote = (rawPct !== null && rawPct >= 100 && utilization !== null)
+    ? `<div class="quota-no-budget" style="margin-top:4px">⚠ Rate limited — check <a href="https://claude.ai/settings/usage" style="color:var(--accent2)">claude.ai/settings/usage</a></div>`
+    : ``;
 
   return `
     <div class="quota-card" style="animation-delay:${delay}ms">
@@ -678,6 +686,7 @@ function liveQuotaCard(
       <div class="quota-tokens">${formatTokenCount(tokens)} tokens</div>
       ${bar}
       <div class="quota-budget-row">${resetLine}${pctLabel}</div>
+      ${inferredNote}
     </div>`;
 }
 
