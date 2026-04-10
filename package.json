@@ -2,19 +2,19 @@
   "name": "clusage",
   "displayName": "Clusage - Claude Usage Tracker",
   "description": "Real-time Claude Code usage tracking — cost, tokens, and live quota in your status bar and a beautiful dashboard.",
-  "version": "1.0.2",
+  "version": "2.0.0",
   "publisher": "Ajax1029",
   "author": {
     "name": "Ajax1029"
   },
   "license": "MIT",
-  "homepage": "https://github.com/ajax/cusage#readme",
+  "homepage": "https://github.com/AjaySingh10/clusage#readme",
   "repository": {
     "type": "git",
-    "url": "https://github.com/ajax/cusage.git"
+    "url": "https://github.com/AjaySingh10/clusage.git"
   },
   "bugs": {
-    "url": "https://github.com/ajax/cusage/issues"
+    "url": "https://github.com/AjaySingh10/clusage/issues"
   },
   "keywords": [
     "claude",
@@ -46,7 +46,7 @@
   "contributes": {
     "commands": [
       {
-        "command": "cusage.openPanel",
+        "command": "clusage.openPanel",
         "title": "Claude Usage: Open Dashboard",
         "icon": "$(graph)"
       }

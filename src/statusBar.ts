@@ -10,7 +10,7 @@ export class StatusBarController {
       vscode.StatusBarAlignment.Right,
       100
     );
-    this.item.command = 'cusage.openPanel';
+    this.item.command = 'clusage.openPanel';
     this.item.text = '$(graph) Claude...';
     this.item.tooltip = 'Claude Usage — click to open dashboard';
     this.item.show();
@@ -25,9 +25,10 @@ export class StatusBarController {
       v < 0.1    ? `${(v * 100).toFixed(1)}%` :
                    `${Math.round(v * 100)}%`;
 
-    // Status bar: $(graph) $3.70  5h:46%  7d:6%
+    // Status bar: $(graph) $3.70  5h:46% 1h23m  7d:6%
     if (quota) {
-      this.item.text = `$(graph) ${cost}  5h:${fmtPct(quota.fiveHourUtilization)}  7d:${fmtPct(quota.sevenDayUtilization)}`;
+      const fiveHourReset = timeUntil(quota.fiveHourResetAt);
+      this.item.text = `$(graph) ${cost}  5h:${fmtPct(quota.fiveHourUtilization)} $(clock)${fiveHourReset}  7d:${fmtPct(quota.sevenDayUtilization)}`;
     } else {
       this.item.text = `$(graph) ${cost}`;
     }

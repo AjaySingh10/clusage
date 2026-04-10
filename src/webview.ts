@@ -12,7 +12,7 @@ export function showDashboard(context: vscode.ExtensionContext, summary: UsageSu
   }
 
   currentPanel = vscode.window.createWebviewPanel(
-    'cusage.dashboard',
+    'clusage.dashboard',
     'Claude Usage',
     vscode.ViewColumn.One,
     { enableScripts: true, retainContextWhenHidden: true }

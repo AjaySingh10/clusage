@@ -6,6 +6,17 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and
 
 ---
 
+## [2.0.0] — 2026-04-10
+
+### Changed
+- Status bar now shows 5h session time remaining alongside quota percentage: `$(graph) $3.70  5h:46% $(clock)1h23m  7d:6%`
+
+### Fixed
+- **Instant load on startup** — last known usage and quota are cached in `globalState` and restored immediately when VS Code opens, so the status bar is never blank while waiting for network/disk
+- **Stale quota after reset** — if a quota window's reset time already passed while VS Code was closed, utilization is shown as 0% on restore rather than the old cached value
+
+---
+
 ## [1.0.2] — 2026-04-03
 
 ### Changed

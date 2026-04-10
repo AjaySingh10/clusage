@@ -10,15 +10,17 @@ import { fetchQuota, QuotaData } from './quota';
 let statusBar: StatusBarController | undefined;
 let lastSummary: UsageSummary | undefined;
 let lastQuota: QuotaData | null = null;
+let extContext: vscode.ExtensionContext | undefined;
 
 async function refreshUsage(): Promise<void> {
   try {
     const records = await scanAllProjects();
     lastSummary = aggregate(records);
+    extContext?.globalState.update('lastSummary', lastSummary);
     statusBar?.update(lastSummary, lastQuota);
     refreshDashboard(lastSummary, lastQuota);
   } catch (err) {
-    console.error('[cusage] usage refresh error:', err);
+    console.error('[clusage] usage refresh error:', err);
   }
 }
 
@@ -27,6 +29,13 @@ let resetRefreshTimer: ReturnType<typeof setTimeout> | undefined;
 async function refreshQuota(): Promise<void> {
   try {
     lastQuota = await fetchQuota();
+    if (lastQuota) {
+      extContext?.globalState.update('lastQuota', {
+        ...lastQuota,
+        fiveHourResetAt: lastQuota.fiveHourResetAt.toISOString(),
+        sevenDayResetAt: lastQuota.sevenDayResetAt.toISOString(),
+      });
+    }
     if (lastSummary) {
       statusBar?.update(lastSummary, lastQuota);
       refreshDashboard(lastSummary, lastQuota);
@@ -49,16 +58,41 @@ async function refreshQuota(): Promise<void> {
       }
     }
   } catch (err) {
-    console.error('[cusage] quota refresh error:', err);
+    console.error('[clusage] quota refresh error:', err);
   }
 }
 
 export function activate(context: vscode.ExtensionContext): void {
+  extContext = context;
   statusBar = new StatusBarController();
   context.subscriptions.push(statusBar);
 
+  // Restore cached data instantly so the status bar is never blank on load
+  const cachedSummary = context.globalState.get<UsageSummary>('lastSummary');
+  const cachedQuotaRaw = context.globalState.get<any>('lastQuota');
+
+  if (cachedSummary) {
+    lastSummary = cachedSummary;
+  }
+  if (cachedQuotaRaw) {
+    const now = Date.now();
+    const fiveHourResetAt = new Date(cachedQuotaRaw.fiveHourResetAt);
+    const sevenDayResetAt = new Date(cachedQuotaRaw.sevenDayResetAt);
+    lastQuota = {
+      ...cachedQuotaRaw,
+      fiveHourResetAt,
+      sevenDayResetAt,
+      // If the reset time has already passed, zero out that window
+      fiveHourUtilization: fiveHourResetAt.getTime() <= now ? 0 : cachedQuotaRaw.fiveHourUtilization,
+      sevenDayUtilization: sevenDayResetAt.getTime() <= now ? 0 : cachedQuotaRaw.sevenDayUtilization,
+    };
+  }
+  if (lastSummary) {
+    statusBar.update(lastSummary, lastQuota);
+  }
+
   // Open dashboard command
-  const openCmd = vscode.commands.registerCommand('cusage.openPanel', () => {
+  const openCmd = vscode.commands.registerCommand('clusage.openPanel', () => {
     if (lastSummary) {
       showDashboard(context, lastSummary, lastQuota);
     } else {

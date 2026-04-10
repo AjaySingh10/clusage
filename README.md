@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="https://raw.githubusercontent.com/AjaySingh10/cusage/main/media/icon.png" width="128" height="128" alt="Claude Usage icon"/>
+<img src="https://raw.githubusercontent.com/AjaySingh10/clusage/main/media/icon.png" width="128" height="128" alt="Claude Usage icon"/>
 
 # Clusage - Claude Usage Tracker
 
@@ -8,8 +8,8 @@
 
 Track every dollar, token, and quota percentage across all your Claude Code sessions without leaving your editor.
 
-[![Version](https://img.shields.io/badge/version-1.0.2-7c6af7?style=flat-square)](https://marketplace.visualstudio.com/items?itemName=cusage.cusage)
-[![VS Code](https://img.shields.io/badge/VS%20Code-1.85+-5eead4?style=flat-square)](https://marketplace.visualstudio.com/items?itemName=cusage.cusage)
+[![Version](https://img.shields.io/badge/version-2.0.0-7c6af7?style=flat-square)](https://marketplace.visualstudio.com/items?itemName=Ajax1029.clusage)
+[![VS Code](https://img.shields.io/badge/VS%20Code-1.85+-5eead4?style=flat-square)](https://marketplace.visualstudio.com/items?itemName=Ajax1029.clusage)
 [![License](https://img.shields.io/badge/license-MIT-4ade80?style=flat-square)](LICENSE)
 
 </div>
@@ -34,18 +34,21 @@ Zero configuration. No API keys. No accounts. It just works.
 The status bar item updates in real time as you use Claude Code:
 
 ```
-⬡  $4.26  5h:60%  7d:8%
+⬡  $4.26  5h:60% 🕐1h23m  7d:8%
 ```
 
 | Segment | What it shows |
 |---|---|
 | `$4.26` | Your total spend today |
-| `5h:60%` | Current session quota used — live from Anthropic API headers |
+| `5h:60%` | 5-hour quota used — live from Anthropic API headers |
+| `🕐1h23m` | Time until the 5-hour quota window resets |
 | `7d:8%` | Weekly quota used — live from Anthropic API headers |
+
+When quota headers are unavailable, only the cost is shown: `⬡  $4.26`
 
 **Hover** over the item for a detailed breakdown table. **Click** to open the full dashboard.
 
-![Tooltip preview](https://raw.githubusercontent.com/AjaySingh10/cusage/main/media/tooltip.png)
+![Tooltip preview](https://raw.githubusercontent.com/AjaySingh10/clusage/main/media/statusbar.png)
 
 ---
 
@@ -57,8 +60,8 @@ Open with a click on the status bar item or via the Command Palette:
 
 The dashboard is a beautiful dark-themed panel with six sections:
 
-![Dashboard preview](https://raw.githubusercontent.com/AjaySingh10/cusage/main/media/dashboard.png) 
-![Dashboard preview](https://raw.githubusercontent.com/AjaySingh10/cusage/main/media/dashboard2.png) 
+![Dashboard preview](https://raw.githubusercontent.com/AjaySingh10/clusage/main/media/dashboard.png) 
+![Dashboard preview](https://raw.githubusercontent.com/AjaySingh10/clusage/main/media/dashboard2.png) 
 
 ---
 
@@ -170,14 +173,14 @@ Search for **Claude Usage** in the Extensions panel (`Ctrl+Shift+X`) and click *
 **From a `.vsix` file**
 
 ```bash
-code --install-extension cusage-1.0.0.vsix
+code --install-extension clusage-2.0.0.vsix
 ```
 
 **Build from source**
 
 ```bash
-git clone https://github.com/ajax/cusage.git
-cd cusage
+git clone https://github.com/AjaySingh10/clusage.git
+cd clusage
 npm install
 npm run compile
 ```
@@ -232,7 +235,7 @@ npm run watch   # TypeScript watch mode
 # Press F5 in VS Code → Extension Development Host with live reload
 ```
 
-Please open issues at [github.com/ajax/cusage/issues](https://github.com/ajax/cusage/issues).
+Please open issues at [github.com/AjaySingh10/clusage/issues](https://github.com/AjaySingh10/clusage/issues).
 
 ---
 
