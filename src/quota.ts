@@ -10,6 +10,7 @@ export interface QuotaData {
   sevenDayResetAt: Date;
   overallStatus: 'allowed' | 'blocked' | 'unknown';
   headersPresent: boolean;       // false = 429 with no headers, utilization inferred
+  sevenDayHeaderPresent: boolean; // false = 7d-utilization header was absent in response
   fetchedAt: Date;
 }
 
@@ -58,6 +59,7 @@ export async function fetchQuota(): Promise<QuotaData | null> {
         const parse5hReset = h['anthropic-ratelimit-unified-5h-reset'];
         const parse7dReset = h['anthropic-ratelimit-unified-7d-reset'];
         const headersPresent = Boolean(parse5hReset || h['anthropic-ratelimit-unified-5h-utilization']);
+        const sevenDayHeaderPresent = Boolean(parse7dReset || h['anthropic-ratelimit-unified-7d-utilization']);
 
         const fiveHourResetAt  = parse5hReset
           ? new Date(parseInt(parse5hReset, 10) * 1000)
@@ -75,13 +77,16 @@ export async function fetchQuota(): Promise<QuotaData | null> {
             sevenDayResetAt,
             overallStatus: 'blocked',
             headersPresent: false,
+            sevenDayHeaderPresent: false,
             fetchedAt: new Date(),
           });
           return;
         }
 
         const fiveHourUtilization = parseFloat(h['anthropic-ratelimit-unified-5h-utilization'] ?? '0') || 0;
-        const sevenDayUtilization = parseFloat(h['anthropic-ratelimit-unified-7d-utilization'] ?? '0') || 0;
+        const sevenDayUtilization = sevenDayHeaderPresent
+          ? parseFloat(h['anthropic-ratelimit-unified-7d-utilization']!) || 0
+          : 0;
         const status = h['anthropic-ratelimit-unified-status'];
 
         resolve({
@@ -91,6 +96,7 @@ export async function fetchQuota(): Promise<QuotaData | null> {
           sevenDayResetAt,
           overallStatus: status === 'blocked' ? 'blocked' : status === 'allowed' ? 'allowed' : 'unknown',
           headersPresent,
+          sevenDayHeaderPresent,
           fetchedAt: new Date(),
         });
       }

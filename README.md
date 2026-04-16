@@ -8,7 +8,7 @@
 
 Track every dollar, token, and quota percentage across all your Claude Code sessions without leaving your editor.
 
-[![Version](https://img.shields.io/badge/version-2.0.0-7c6af7?style=flat-square)](https://marketplace.visualstudio.com/items?itemName=Ajax1029.clusage)
+[![Version](https://img.shields.io/badge/version-2.1.0-7c6af7?style=flat-square)](https://marketplace.visualstudio.com/items?itemName=Ajax1029.clusage)
 [![VS Code](https://img.shields.io/badge/VS%20Code-1.85+-5eead4?style=flat-square)](https://marketplace.visualstudio.com/items?itemName=Ajax1029.clusage)
 [![License](https://img.shields.io/badge/license-MIT-4ade80?style=flat-square)](LICENSE)
 
@@ -147,7 +147,7 @@ Claude Code writes a `.jsonl` file for every conversation under `~/.claude/proje
 2. **Filters** to final assistant messages only (`stop_reason != null`) — avoids double-counting the streaming header that carries duplicate token counts
 3. **Computes cost** locally using published Anthropic per-token pricing
 4. **Watches** for new writes with a file-system watcher — refreshes within 500 ms of any Claude Code activity
-5. **Fetches live quota** on startup and every 5 minutes by making a 1-token API call to `api.anthropic.com` and reading the `anthropic-ratelimit-*` response headers — uses the OAuth token already stored in `~/.claude/.credentials.json`
+5. **Fetches live quota** on startup, ~1 second after any new Claude Code activity, and every 5 minutes as a fallback - makes a 1-token API call to `api.anthropic.com` and reads the `anthropic-ratelimit-*` response headers using the OAuth token already stored in `~/.claude/.credentials.json`
 
 The dashboard and status bar stay in sync automatically. No polling loops, no manual refreshes.
 
@@ -173,7 +173,7 @@ Search for **Claude Usage** in the Extensions panel (`Ctrl+Shift+X`) and click *
 **From a `.vsix` file**
 
 ```bash
-code --install-extension clusage-2.0.0.vsix
+code --install-extension clusage-2.1.0.vsix
 ```
 
 **Build from source**
@@ -210,7 +210,7 @@ Costs are computed locally using these published rates:
 | What | Detail |
 |---|---|
 | Data storage | All session data is read **locally** from `~/.claude/` — nothing is uploaded |
-| Outbound requests | One minimal API call to `api.anthropic.com/v1/messages` (max_tokens=1, ~$0.000001) every 5 minutes, used solely to read rate-limit headers |
+| Outbound requests | One minimal API call to `api.anthropic.com/v1/messages` (max_tokens=1, ~$0.000001) after each Claude Code response and every 5 minutes as a fallback, used solely to read rate-limit headers |
 | Analytics | None |
 | Telemetry | None |
 | Third-party services | None |

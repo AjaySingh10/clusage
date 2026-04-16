@@ -25,10 +25,23 @@ async function refreshUsage(): Promise<void> {
 }
 
 let resetRefreshTimer: ReturnType<typeof setTimeout> | undefined;
+let quotaFetchInFlight = false;
 
 async function refreshQuota(): Promise<void> {
+  if (quotaFetchInFlight) return;
+  quotaFetchInFlight = true;
   try {
-    lastQuota = await fetchQuota();
+    const newQuota = await fetchQuota();
+    // If the 7d header was absent in this response, preserve the previous 7d
+    // value so the session reset doesn't wipe the weekly utilization.
+    if (newQuota && !newQuota.sevenDayHeaderPresent && lastQuota) {
+      const now = Date.now();
+      if (lastQuota.sevenDayResetAt.getTime() > now) {
+        newQuota.sevenDayUtilization = lastQuota.sevenDayUtilization;
+        newQuota.sevenDayResetAt = lastQuota.sevenDayResetAt;
+      }
+    }
+    lastQuota = newQuota;
     if (lastQuota) {
       extContext?.globalState.update('lastQuota', {
         ...lastQuota,
@@ -59,6 +72,8 @@ async function refreshQuota(): Promise<void> {
     }
   } catch (err) {
     console.error('[clusage] quota refresh error:', err);
+  } finally {
+    quotaFetchInFlight = false;
   }
 }
 
@@ -85,6 +100,7 @@ export function activate(context: vscode.ExtensionContext): void {
       // If the reset time has already passed, zero out that window
       fiveHourUtilization: fiveHourResetAt.getTime() <= now ? 0 : cachedQuotaRaw.fiveHourUtilization,
       sevenDayUtilization: sevenDayResetAt.getTime() <= now ? 0 : cachedQuotaRaw.sevenDayUtilization,
+      sevenDayHeaderPresent: cachedQuotaRaw.sevenDayHeaderPresent ?? true,
     };
   }
   if (lastSummary) {
@@ -114,15 +130,20 @@ export function activate(context: vscode.ExtensionContext): void {
   );
   const watcher = vscode.workspace.createFileSystemWatcher(claudeGlob);
   let debounceTimer: ReturnType<typeof setTimeout> | undefined;
+  let quotaDebounceTimer: ReturnType<typeof setTimeout> | undefined;
   const debouncedRefresh = () => {
     if (debounceTimer) clearTimeout(debounceTimer);
     debounceTimer = setTimeout(() => refreshUsage(), 500);
+    // Refresh quota ~15 s after the last JSONL write, so the status bar
+    // catches up within a turn or two rather than waiting the full poll interval.
+    if (quotaDebounceTimer) clearTimeout(quotaDebounceTimer);
+    quotaDebounceTimer = setTimeout(() => refreshQuota(), 1_000);
   };
   watcher.onDidChange(debouncedRefresh, null, context.subscriptions);
   watcher.onDidCreate(debouncedRefresh, null, context.subscriptions);
   context.subscriptions.push(watcher);
 
-  // Poll quota every 5 minutes
+  // Poll quota every 5 minutes as a fallback when Claude Code is idle
   const quotaInterval = setInterval(() => refreshQuota(), 5 * 60 * 1000);
   context.subscriptions.push({ dispose: () => clearInterval(quotaInterval) });
 

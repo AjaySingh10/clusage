@@ -6,6 +6,16 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and
 
 ---
 
+## [2.1.0] — 2026-04-17
+
+### Fixed
+- **Weekly quota preserved on session reset** — when the 5-hour window resets and a fresh quota fetch returns without a `7d-utilization` header, the previous weekly utilization is now carried forward instead of being zeroed out
+
+### Changed
+- **Faster quota updates** — quota now refreshes ~1 second after each Claude Code API response (triggered by JSONL file writes), down from a fixed 5-minute poll. The 5-minute interval remains as a fallback when Claude Code is idle.
+
+---
+
 ## [2.0.0] — 2026-04-10
 
 ### Changed
