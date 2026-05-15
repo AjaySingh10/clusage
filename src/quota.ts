@@ -14,18 +14,31 @@ export interface QuotaData {
   fetchedAt: Date;
 }
 
-interface Credentials {
-  claudeAiOauth?: { accessToken?: string };
-}
-
 function readToken(): string | null {
-  try {
-    const credPath = path.join(os.homedir(), '.claude', '.credentials.json');
-    const creds: Credentials = JSON.parse(fs.readFileSync(credPath, 'utf8'));
-    return creds.claudeAiOauth?.accessToken ?? null;
-  } catch {
-    return null;
+  const home = os.homedir();
+  // Candidate paths in priority order — covers Linux, WSL, macOS
+  const candidates = [
+    path.join(home, '.claude', '.credentials.json'),
+    path.join(home, 'Library', 'Application Support', 'Claude', '.credentials.json'),
+    path.join(home, '.config', 'claude', '.credentials.json'),
+  ];
+
+  for (const credPath of candidates) {
+    try {
+      const raw = JSON.parse(fs.readFileSync(credPath, 'utf8'));
+      // Try every known field name for the OAuth access token
+      const token =
+        raw?.claudeAiOauth?.accessToken ??
+        raw?.oauthAccount?.accessToken ??
+        raw?.oauth?.accessToken ??
+        raw?.accessToken ??
+        null;
+      if (token) return token;
+    } catch {
+      // file missing or unreadable — try next candidate
+    }
   }
+  return null;
 }
 
 export async function fetchQuota(): Promise<QuotaData | null> {
@@ -45,6 +58,7 @@ export async function fetchQuota(): Promise<QuotaData | null> {
         path: '/v1/messages',
         method: 'POST',
         headers: {
+          'authorization': `Bearer ${token}`,
           'x-api-key': token,
           'anthropic-version': '2023-06-01',
           'anthropic-client-platform': 'claude_cli',
