@@ -147,11 +147,12 @@ export function activate(context: vscode.ExtensionContext): void {
   const quotaInterval = setInterval(() => refreshQuota(), 5 * 60 * 1000);
   context.subscriptions.push({ dispose: () => clearInterval(quotaInterval) });
 
-  // Initial load — quota first so the panel shows it immediately
+  // Initial load - quota first so the panel shows it immediately
   refreshUsage();
   refreshQuota();
 }
 
 export function deactivate(): void {
+  if (resetRefreshTimer) clearTimeout(resetRefreshTimer);
   statusBar?.dispose();
 }

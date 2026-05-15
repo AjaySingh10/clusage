@@ -4,11 +4,11 @@
 
 # Clusage - Claude Usage Tracker
 
-**Real-time cost, token & quota tracking for Claude Code — directly in VS Code.**
+**Real-time cost, token & quota tracking for Claude Code - directly in VS Code.**
 
 Track every dollar, token, and quota percentage across all your Claude Code sessions without leaving your editor.
 
-[![Version](https://img.shields.io/badge/version-2.1.0-7c6af7?style=flat-square)](https://marketplace.visualstudio.com/items?itemName=Ajax1029.clusage)
+[![Version](https://img.shields.io/badge/version-3.0.0-7c6af7?style=flat-square)](https://marketplace.visualstudio.com/items?itemName=Ajax1029.clusage)
 [![VS Code](https://img.shields.io/badge/VS%20Code-1.85+-5eead4?style=flat-square)](https://marketplace.visualstudio.com/items?itemName=Ajax1029.clusage)
 [![License](https://img.shields.io/badge/license-MIT-4ade80?style=flat-square)](LICENSE)
 
@@ -20,7 +20,7 @@ Track every dollar, token, and quota percentage across all your Claude Code sess
 
 Claude Usage connects to Claude Code's local session files and your Anthropic API quota headers to give you **instant visibility** into:
 
-- 💰 How much you've spent — today, this week, this month, all time
+- 💰 How much you've spent - today, this week, this month, all time
 - 📊 Which projects and models are driving your costs
 - ⚡ Live quota consumption for your current session and weekly limit
 - 🔢 Token breakdown across input, output, cache read, and cache write
@@ -40,15 +40,15 @@ The status bar item updates in real time as you use Claude Code:
 | Segment | What it shows |
 |---|---|
 | `$4.26` | Your total spend today |
-| `5h:60%` | 5-hour quota used — live from Anthropic API headers |
+| `5h:60%` | 5-hour quota used - live from Anthropic API headers |
 | `🕐1h23m` | Time until the 5-hour quota window resets |
-| `7d:8%` | Weekly quota used — live from Anthropic API headers |
+| `7d:8%` | Weekly quota used - live from Anthropic API headers |
 
 When quota headers are unavailable, only the cost is shown: `⬡  $4.26`
 
 **Hover** over the item for a detailed breakdown table. **Click** to open the full dashboard.
 
-![Tooltip preview](https://raw.githubusercontent.com/AjaySingh10/clusage/main/media/statusbar.png)
+![Tooltip preview](https://raw.githubusercontent.com/AjaySingh10/clusage/main/media/screenshots/statusbar.png)
 
 ---
 
@@ -60,8 +60,8 @@ Open with a click on the status bar item or via the Command Palette:
 
 The dashboard is a beautiful dark-themed panel with six sections:
 
-![Dashboard preview](https://raw.githubusercontent.com/AjaySingh10/clusage/main/media/dashboard.png) 
-![Dashboard preview](https://raw.githubusercontent.com/AjaySingh10/clusage/main/media/dashboard2.png) 
+![Dashboard preview](https://raw.githubusercontent.com/AjaySingh10/clusage/main/media/screenshots/dashboard.png) 
+![Dashboard preview](https://raw.githubusercontent.com/AjaySingh10/clusage/main/media/screenshots/dashboard2.png) 
 
 ---
 
@@ -80,7 +80,7 @@ Four hero cards showing your costs at every time horizon:
 
 ### ⚡ Usage Windows & Live Quota
 
-Three cards showing rolling usage windows — the first two powered by **live Anthropic API rate-limit headers**, the same data shown on `claude.ai/settings/usage`:
+Three cards showing rolling usage windows - the first two powered by **live Anthropic API rate-limit headers**, the same data shown on `claude.ai/settings/usage`:
 
 | Card | Data Source |
 |---|---|
@@ -94,7 +94,7 @@ Each quota card shows:
 - Exact reset countdown (`Resets in 1h 28m`)
 - Percentage used with one decimal place for precision
 
-No manual limits to configure — quota is read directly from Anthropic's API.
+No manual limits to configure - quota is read directly from Anthropic's API.
 
 ---
 
@@ -144,9 +144,9 @@ The 20 most recent sessions showing:
 Claude Code writes a `.jsonl` file for every conversation under `~/.claude/projects/`. Claude Usage:
 
 1. **Scans** all `~/.claude/projects/**/*.jsonl` files on startup
-2. **Filters** to final assistant messages only (`stop_reason != null`) — avoids double-counting the streaming header that carries duplicate token counts
+2. **Filters** to final assistant messages only (`stop_reason != null`) - avoids double-counting the streaming header that carries duplicate token counts
 3. **Computes cost** locally using published Anthropic per-token pricing
-4. **Watches** for new writes with a file-system watcher — refreshes within 500 ms of any Claude Code activity
+4. **Watches** for new writes with a file-system watcher - refreshes within 500 ms of any Claude Code activity
 5. **Fetches live quota** on startup, ~1 second after any new Claude Code activity, and every 5 minutes as a fallback - makes a 1-token API call to `api.anthropic.com` and reads the `anthropic-ratelimit-*` response headers using the OAuth token already stored in `~/.claude/.credentials.json`
 
 The dashboard and status bar stay in sync automatically. No polling loops, no manual refreshes.
@@ -157,7 +157,7 @@ The dashboard and status bar stay in sync automatically. No polling loops, no ma
 
 | Requirement | Details |
 |---|---|
-| [Claude Code](https://claude.ai/code) | Must be installed and signed in — provides `~/.claude/` |
+| [Claude Code](https://claude.ai/code) | Must be installed and signed in - provides `~/.claude/` |
 | VS Code | Version 1.85 or later |
 | Network | Access to `api.anthropic.com` for live quota (graceful fallback if unavailable) |
 | Platform | Windows, macOS, Linux (including WSL) |
@@ -192,11 +192,13 @@ Then press `F5` in VS Code to launch an Extension Development Host.
 
 Costs are computed locally using these published rates:
 
-| Model | Input | Output | Cache Write | Cache Read |
+| Model | Input | Output | Cache Write (5m) | Cache Read |
 |---|---|---|---|---|
-| Claude Opus 4 / 4.6 | $15.00 / MTok | $75.00 / MTok | $18.75 / MTok | $1.50 / MTok |
-| Claude Sonnet 4 / 4.6 | $3.00 / MTok | $15.00 / MTok | $3.75 / MTok | $0.30 / MTok |
-| Claude Haiku 4 / 4.5 | $0.80 / MTok | $4.00 / MTok | $1.00 / MTok | $0.08 / MTok |
+| Claude Opus 4.5 / 4.6 / 4.7 | $5.00 / MTok | $25.00 / MTok | $6.25 / MTok | $0.50 / MTok |
+| Claude Opus 4 / 4.1 (deprecated) | $15.00 / MTok | $75.00 / MTok | $18.75 / MTok | $1.50 / MTok |
+| Claude Sonnet 4 / 4.5 / 4.6 | $3.00 / MTok | $15.00 / MTok | $3.75 / MTok | $0.30 / MTok |
+| Claude Haiku 4.5 | $1.00 / MTok | $5.00 / MTok | $1.25 / MTok | $0.10 / MTok |
+| Claude Haiku 3.5 (retired) | $0.80 / MTok | $4.00 / MTok | $1.00 / MTok | $0.08 / MTok |
 | Claude 3 Opus | $15.00 / MTok | $75.00 / MTok | $18.75 / MTok | $1.50 / MTok |
 | Claude 3.5 Sonnet | $3.00 / MTok | $15.00 / MTok | $3.75 / MTok | $0.30 / MTok |
 | Claude 3 Haiku | $0.25 / MTok | $1.25 / MTok | $0.31 / MTok | $0.025 / MTok |
@@ -209,7 +211,7 @@ Costs are computed locally using these published rates:
 
 | What | Detail |
 |---|---|
-| Data storage | All session data is read **locally** from `~/.claude/` — nothing is uploaded |
+| Data storage | All session data is read **locally** from `~/.claude/` - nothing is uploaded |
 | Outbound requests | One minimal API call to `api.anthropic.com/v1/messages` (max_tokens=1, ~$0.000001) after each Claude Code response and every 5 minutes as a fallback, used solely to read rate-limit headers |
 | Analytics | None |
 | Telemetry | None |
@@ -219,10 +221,10 @@ Costs are computed locally using these published rates:
 
 ## ⚠️ Known Limitations
 
-- Cost figures are **estimates** — actual invoices may differ due to plan discounts, overages, or pricing changes
+- Cost figures are **estimates** - actual invoices may differ due to plan discounts, overages, or pricing changes
 - Quota figures reflect your **Claude.ai / Claude Code plan limits**, not raw Anthropic API key limits
 - Sessions interrupted mid-stream may show incomplete costs until Claude Code flushes the JSONL file
-- The extension requires Claude Code to be signed in via OAuth — API-key-only setups will show usage data but no live quota
+- The extension requires Claude Code to be signed in via OAuth - API-key-only setups will show usage data but no live quota
 
 ---
 

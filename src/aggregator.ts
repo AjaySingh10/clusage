@@ -46,6 +46,7 @@ export interface UsageSummary {
   monthCost: number;
   weekCost: number;
   todayTokens: number;
+  todayMessages: number;
   allTimeTokens: number;
   tokenBreakdown: TokenBreakdown;
   byProject: ProjectSummary[];
@@ -56,6 +57,10 @@ export interface UsageSummary {
   lastHour: QuotaWindow;
   lastFiveHours: QuotaWindow;
   lastWeek: QuotaWindow;
+  // Comparison stats for tooltip
+  yesterdayCost: number;
+  averageDailyCost: number; // 30-day average (excluding today)
+  streakDays: number;       // consecutive days with usage ending today
 }
 
 export function formatTokenCount(n: number): string {
@@ -65,7 +70,7 @@ export function formatTokenCount(n: number): string {
 }
 
 export function formatCost(usd: number): string {
-  if (usd < 0.01) return `$${(usd * 100).toFixed(2)}¢`;
+  if (usd < 0.01) return `${(usd * 100).toFixed(2)}¢`;
   if (usd < 1) return `$${usd.toFixed(3)}`;
   if (usd < 100) return `$${usd.toFixed(2)}`;
   return `$${usd.toFixed(0)}`;
@@ -106,13 +111,20 @@ export function aggregate(records: UsageRecord[]): UsageSummary {
   const weekStart = startOfWeek(now).getTime();
   const monthStart = startOfMonth(now).getTime();
 
+  const DAY_MS = 24 * 60 * 60 * 1000;
+  const yesterdayStart = todayStart - DAY_MS;
+
   let allTimeCost = 0;
   let todayCost = 0;
   let monthCost = 0;
   let weekCost = 0;
   let todayTokens = 0;
+  let todayMessages = 0;
   let allTimeTokens = 0;
+  let yesterdayCost = 0;
+  let days30Cost = 0;
   const tokenBreakdown: TokenBreakdown = { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 };
+  const datesWithUsage = new Set<number>(); // midnight timestamps
 
   // Maps for grouping
   const projectMap = new Map<string, ProjectSummary>();
@@ -134,9 +146,13 @@ export function aggregate(records: UsageRecord[]): UsageSummary {
     if (t >= todayStart) {
       todayCost += r.costUSD;
       todayTokens += tokens;
+      todayMessages++;
     }
     if (t >= weekStart) weekCost += r.costUSD;
     if (t >= monthStart) monthCost += r.costUSD;
+    if (t >= yesterdayStart && t < todayStart) yesterdayCost += r.costUSD;
+    if (t >= todayStart - 30 * DAY_MS && t < todayStart) days30Cost += r.costUSD;
+    datesWithUsage.add(startOfDay(r.timestamp).getTime());
 
     // Project grouping
     const projectKey = r.projectPath;
@@ -212,6 +228,13 @@ export function aggregate(records: UsageRecord[]): UsageSummary {
     if (age <= WEEK_MS)      { lastWeek.cost += r.costUSD;      lastWeek.tokens += tok; }
   }
 
+  // Streak: consecutive calendar days with usage ending today (or yesterday if no usage today)
+  let streakDays = 0;
+  for (let d = todayStart; datesWithUsage.has(d); d -= DAY_MS) streakDays++;
+
+  // 30-day average daily cost (excludes today - partial day would skew it)
+  const averageDailyCost = days30Cost / 30;
+
   const byProject = Array.from(projectMap.values())
     .sort((a, b) => b.costUSD - a.costUSD);
 
@@ -228,6 +251,7 @@ export function aggregate(records: UsageRecord[]): UsageSummary {
     monthCost,
     weekCost,
     todayTokens,
+    todayMessages,
     allTimeTokens,
     tokenBreakdown,
     byProject,
@@ -237,5 +261,8 @@ export function aggregate(records: UsageRecord[]): UsageSummary {
     lastHour,
     lastFiveHours,
     lastWeek,
+    yesterdayCost,
+    averageDailyCost,
+    streakDays,
   };
 }

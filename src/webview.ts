@@ -4,10 +4,14 @@ import { QuotaData } from './quota';
 
 let currentPanel: vscode.WebviewPanel | undefined;
 
+let extensionUri: vscode.Uri | undefined;
+
 export function showDashboard(context: vscode.ExtensionContext, summary: UsageSummary, quota: QuotaData | null): void {
+  extensionUri = context.extensionUri;
+
   if (currentPanel) {
     currentPanel.reveal(vscode.ViewColumn.One);
-    currentPanel.webview.html = getHtml(summary, quota);
+    currentPanel.webview.html = getHtml(currentPanel.webview, summary, quota);
     return;
   }
 
@@ -18,7 +22,7 @@ export function showDashboard(context: vscode.ExtensionContext, summary: UsageSu
     { enableScripts: true, retainContextWhenHidden: true }
   );
 
-  currentPanel.webview.html = getHtml(summary, quota);
+  currentPanel.webview.html = getHtml(currentPanel.webview, summary, quota);
 
   currentPanel.onDidDispose(() => {
     currentPanel = undefined;
@@ -27,7 +31,7 @@ export function showDashboard(context: vscode.ExtensionContext, summary: UsageSu
 
 export function refreshDashboard(summary: UsageSummary, quota: QuotaData | null): void {
   if (currentPanel?.visible) {
-    currentPanel.webview.html = getHtml(summary, quota);
+    currentPanel.webview.html = getHtml(currentPanel.webview, summary, quota);
   }
 }
 
@@ -55,7 +59,10 @@ function pct(value: number, total: number): number {
   return Math.round((value / total) * 100);
 }
 
-function getHtml(summary: UsageSummary, quota: QuotaData | null): string {
+function getHtml(webview: vscode.Webview, summary: UsageSummary, quota: QuotaData | null): string {
+  const iconUri = extensionUri
+    ? webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, 'media', 'icon.png'))
+    : '';
   const { tokenBreakdown, byProject, byModel, recentSessions } = summary;
   const totalBreakdownTokens =
     tokenBreakdown.input + tokenBreakdown.output + tokenBreakdown.cacheRead + tokenBreakdown.cacheWrite;
@@ -158,10 +165,13 @@ function getHtml(summary: UsageSummary, quota: QuotaData | null): string {
   }
   .header-icon {
     width: 32px; height: 32px;
-    background: linear-gradient(135deg, var(--accent), var(--accent2));
     border-radius: 8px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 16px;
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+  .header-icon img {
+    width: 100%; height: 100%;
+    display: block;
   }
   .header h1 { font-size: 16px; font-weight: 600; color: var(--text); }
   .header-sub { font-size: 11px; color: var(--muted); margin-top: 1px; }
@@ -519,7 +529,7 @@ function getHtml(summary: UsageSummary, quota: QuotaData | null): string {
 
 <div class="header">
   <div class="header-title">
-    <div class="header-icon">📊</div>
+    <div class="header-icon"><img src="${iconUri}" alt="Claude Usage"/></div>
     <div>
       <h1>Claude Usage</h1>
       <div class="header-sub">~/.claude/projects</div>
@@ -566,7 +576,7 @@ function getHtml(summary: UsageSummary, quota: QuotaData | null): string {
 
 <!-- Token breakdown -->
 <div class="section">
-  <div class="section-title">Token Breakdown — All Time</div>
+  <div class="section-title">Token Breakdown - All Time</div>
   <div class="token-grid">
     <div class="token-card" style="animation-delay:60ms">
       <div class="token-label">
@@ -657,7 +667,7 @@ function liveQuotaCard(
   // Display label: cap display at 100%, show one decimal when < 10%
   const displayPct = rawPct !== null ? Math.min(rawPct, 100) : null;
   const pctLabel = displayPct === null
-    ? `<span class="muted">—</span>`
+    ? `<span class="muted">-</span>`
     : rawPct! > 100
       ? `<span class="quota-pct danger">Limit reached</span>`
       : displayPct < 0.05
@@ -676,7 +686,7 @@ function liveQuotaCard(
 
   // If utilisation came from a 429 (no actual headers), add a note
   const inferredNote = (rawPct !== null && rawPct >= 100 && utilization !== null)
-    ? `<div class="quota-no-budget" style="margin-top:4px">⚠ Rate limited — check <a href="https://claude.ai/settings/usage" style="color:var(--accent2)">claude.ai/settings/usage</a></div>`
+    ? `<div class="quota-no-budget" style="margin-top:4px">⚠ Rate limited - check <a href="https://claude.ai/settings/usage" style="color:var(--accent2)">claude.ai/settings/usage</a></div>`
     : ``;
 
   return `
@@ -705,7 +715,7 @@ function timeUntil(date: Date): string {
   if (diff <= 0) return 'soon';
   const h = Math.floor(diff / 3_600_000);
   const m = Math.floor((diff % 3_600_000) / 60_000);
-  if (h > 24) {
+  if (h >= 24) {
     const d = Math.floor(h / 24);
     return `in ${d}d ${h % 24}h`;
   }

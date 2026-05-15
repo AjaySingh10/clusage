@@ -1,95 +1,60 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
   <defs>
-    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%"   stop-color="#1a1730"/>
-      <stop offset="100%" stop-color="#0d0d14"/>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1e1e2e"/>
+      <stop offset="100%" style="stop-color:#13131f"/>
     </linearGradient>
-    <linearGradient id="barGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%"   stop-color="#a78bfa"/>
-      <stop offset="100%" stop-color="#5eead4"/>
+    <linearGradient id="glow" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#f0a070"/>
+      <stop offset="100%" style="stop-color:#c85a30"/>
     </linearGradient>
-    <filter id="glow" x="-30%" y="-30%" width="160%" height="160%">
-      <feGaussianBlur stdDeviation="3" result="blur"/>
-      <feMerge>
-        <feMergeNode in="blur"/>
-        <feMergeNode in="SourceGraphic"/>
-      </feMerge>
-    </filter>
-    <filter id="claudeGlow" x="-80%" y="-80%" width="260%" height="260%">
-      <feGaussianBlur stdDeviation="3" result="blur"/>
-      <feMerge>
-        <feMergeNode in="blur"/>
-        <feMergeNode in="SourceGraphic"/>
-      </feMerge>
-    </filter>
-    <clipPath id="roundedClip">
-      <rect width="128" height="128" rx="22" ry="22"/>
-    </clipPath>
+    <linearGradient id="pulseGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%"   stop-color="#7c6af7" stop-opacity="0.2"/>
+      <stop offset="35%"  stop-color="#7c6af7"/>
+      <stop offset="65%"  stop-color="#5eead4"/>
+      <stop offset="100%" stop-color="#5eead4" stop-opacity="0.2"/>
+    </linearGradient>
   </defs>
 
-  <!-- Background -->
-  <rect width="128" height="128" rx="22" ry="22" fill="url(#bgGrad)"/>
-  <rect width="128" height="128" rx="22" ry="22"
-        fill="none" stroke="url(#barGrad)" stroke-width="1.5" opacity="0.35"/>
+  <rect width="128" height="128" rx="22" fill="url(#bg)"/>
 
-  <!-- Grid lines -->
-  <g stroke="#ffffff" stroke-width="0.5" opacity="0.06" clip-path="url(#roundedClip)">
-    <line x1="20" y1="42" x2="108" y2="42"/>
-    <line x1="20" y1="58" x2="108" y2="58"/>
-    <line x1="20" y1="74" x2="108" y2="74"/>
-    <line x1="20" y1="90" x2="108" y2="90"/>
+  <!-- Bottom stack — clock -->
+  <rect x="20" y="82" width="88" height="10" rx="3" fill="#1c1c2e" stroke="#2e2c48" stroke-width="1.2"/>
+  <circle cx="64" cy="87" r="3.8" fill="none" stroke="#7c6af7" stroke-width="0.9" opacity="0.85"/>
+  <line x1="64" y1="87" x2="62.5" y2="84.2" stroke="#7c6af7"  stroke-width="1"   stroke-linecap="round" opacity="0.85"/>
+  <line x1="64" y1="87" x2="66.8" y2="84.0" stroke="#a78bfa" stroke-width="0.8" stroke-linecap="round" opacity="0.85"/>
+  <circle cx="64" cy="87" r="0.7" fill="#7c6af7" opacity="0.9"/>
+
+  <!-- Middle stack — dollar sign -->
+  <rect x="20" y="70" width="88" height="10" rx="3" fill="#202030" stroke="#32304e" stroke-width="1.2"/>
+  <text x="64" y="77.5" text-anchor="middle"
+        font-family="system-ui,sans-serif"
+        font-size="7" font-weight="700"
+        fill="#4ade80" opacity="0.85">$</text>
+
+  <!-- Top stack (hidden behind main card) -->
+  <rect x="20" y="58" width="88" height="10" rx="3" fill="#242244" stroke="#363460" stroke-width="1.2"/>
+
+  <!-- Top card full face -->
+  <rect x="20" y="24" width="88" height="46" rx="6" fill="#2a2848" stroke="#d97757" stroke-width="2"/>
+
+  <!-- Pulse / heartbeat line on top card -->
+  <polyline
+    points="26,47 35,47 40,39 46,55 52,43 58,49 64,41 70,49 76,43 82,55 88,39 93,47 102,47"
+    fill="none" stroke="url(#pulseGrad)" stroke-width="2"
+    stroke-linecap="round" stroke-linejoin="round" opacity="0.85"/>
+
+  <!-- Claude asterisk on top card -->
+  <g transform="translate(64,47)" fill="url(#glow)">
+    <circle cx="0" cy="0" r="5.5"/>
+    <ellipse cx="0" cy="0" rx="3.8" ry="14" transform="rotate(0)"/>
+    <ellipse cx="0" cy="0" rx="3.8" ry="14" transform="rotate(60)"/>
+    <ellipse cx="0" cy="0" rx="3.8" ry="14" transform="rotate(120)"/>
   </g>
 
-  <!-- Bar chart -->
-  <rect x="22" y="82" width="13" height="22" rx="3" ry="3" fill="url(#barGrad)" opacity="0.55" filter="url(#glow)"/>
-  <rect x="40" y="68" width="13" height="36" rx="3" ry="3" fill="url(#barGrad)" opacity="0.70" filter="url(#glow)"/>
-  <rect x="58" y="50" width="13" height="54" rx="3" ry="3" fill="url(#barGrad)" opacity="0.85" filter="url(#glow)"/>
-  <rect x="76" y="34" width="13" height="70" rx="3" ry="3" fill="url(#barGrad)" opacity="1"   filter="url(#glow)"/>
-  <rect x="94" y="56" width="13" height="48" rx="3" ry="3" fill="url(#barGrad)" opacity="0.65" filter="url(#glow)"/>
-
-  <!-- Trend line -->
-  <polyline points="28,80 46,65 64,48 83,31 100,53"
-    fill="none" stroke="#ffffff" stroke-width="2"
-    stroke-linecap="round" stroke-linejoin="round" opacity="0.45"/>
-  <circle cx="28"  cy="80" r="2.5" fill="#ffffff" opacity="0.6"/>
-  <circle cx="46"  cy="65" r="2.5" fill="#ffffff" opacity="0.6"/>
-  <circle cx="64"  cy="48" r="2.5" fill="#ffffff" opacity="0.6"/>
-  <circle cx="83"  cy="31" r="3.5" fill="#a78bfa" opacity="1"/>
-  <circle cx="100" cy="53" r="2.5" fill="#ffffff" opacity="0.6"/>
-  <circle cx="83"  cy="31" r="7"   fill="#a78bfa" opacity="0.2"/>
-
-  <!-- Baseline -->
-  <line x1="18" y1="104" x2="110" y2="104"
-        stroke="#ffffff" stroke-width="1" opacity="0.15" stroke-linecap="round"/>
-
-  <!-- ── Claude icon badge (top-right) ── -->
-  <!-- Outer glow halo -->
-  <circle cx="108" cy="20" r="16" fill="#e07840" opacity="0.10" filter="url(#claudeGlow)"/>
-  <!-- Badge background -->
-  <circle cx="108" cy="20" r="13" fill="#1a100a" opacity="0.95"/>
-  <!-- Badge border -->
-  <circle cx="108" cy="20" r="13" fill="none" stroke="#e07840" stroke-width="1.2" opacity="0.6"/>
-
-  <!-- Claude sparkle mark — 8 rays at 45° intervals, centered at (108,20) -->
-  <!-- inner radius 2.2, outer radius 8 -->
-  <g transform="translate(108,20)"
-     stroke="#e07840" stroke-width="2.2" stroke-linecap="round"
-     filter="url(#claudeGlow)" opacity="0.95">
-    <!-- up -->
-    <line x1="0"     y1="-2.2"  x2="0"     y2="-8"/>
-    <!-- up-right -->
-    <line x1="1.56"  y1="-1.56" x2="5.66"  y2="-5.66"/>
-    <!-- right -->
-    <line x1="2.2"   y1="0"     x2="8"     y2="0"/>
-    <!-- down-right -->
-    <line x1="1.56"  y1="1.56"  x2="5.66"  y2="5.66"/>
-    <!-- down -->
-    <line x1="0"     y1="2.2"   x2="0"     y2="8"/>
-    <!-- down-left -->
-    <line x1="-1.56" y1="1.56"  x2="-5.66" y2="5.66"/>
-    <!-- left -->
-    <line x1="-2.2"  y1="0"     x2="-8"    y2="0"/>
-    <!-- up-left -->
-    <line x1="-1.56" y1="-1.56" x2="-5.66" y2="-5.66"/>
-  </g>
+  <!-- CLUSAGE label -->
+  <text x="64" y="110" text-anchor="middle"
+        font-family="system-ui,sans-serif"
+        font-size="11" font-weight="600" letter-spacing="3"
+        fill="#d97757" opacity="0.8">CLUSAGE</text>
 </svg>
