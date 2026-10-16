@@ -7,7 +7,11 @@ const C_RED    = '#f87171';
 
 function urgencyColor(quota: QuotaData | null): string | undefined {
   if (!quota) return undefined;
-  const max = Math.max(quota.fiveHourUtilization, quota.sevenDayUtilization);
+  const max = Math.max(
+    quota.fiveHourUtilization,
+    quota.sevenDayUtilization,
+    ...quota.modelWeekly.map(m => m.utilization),
+  );
   if (max >= 0.9) return C_RED;
   if (max >= 0.7) return C_AMBER;
   return undefined;
@@ -86,6 +90,10 @@ function buildTooltip(summary: UsageSummary, quota: QuotaData | null, showCost: 
       `· Session (5h): **${fmtPct(quota.fiveHourUtilization)}** - resets in ${timeUntil(quota.fiveHourResetAt)}`,
       `· Weekly  (7d): **${fmtPct(quota.sevenDayUtilization)}** - resets in ${timeUntil(quota.sevenDayResetAt)}`,
     );
+    for (const m of quota.modelWeekly) {
+      const reset = m.resetAt ? ` - resets in ${timeUntil(m.resetAt)}` : '';
+      lines.push(`· ${m.modelName} (7d): **${fmtPct(m.utilization)}**${reset}`);
+    }
   }
 
   lines.push(

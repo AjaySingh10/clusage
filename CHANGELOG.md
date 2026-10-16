@@ -6,6 +6,29 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and
 
 ---
 
+## [6.0.0] - 2026-10-16
+
+### Added
+- **Model-scoped weekly limits in the Quota views** (#8) — the "Weekly Fable" line from Claude Code's `/usage` panel now appears in the status-bar tooltip (`· Fable (7d): 63% - resets in 2d 4h`) and as an extra card in the dashboard's Usage Windows & Quota section. It renders only when your plan reports such a limit, and the label comes from the data, so other models (or several at once) are shown too. The value counts toward the status bar's amber/red warning colour.
+  - This bucket is not in the `/v1/messages` rate-limit headers, only in `GET /api/oauth/usage`, which is aggressively rate-limited. Clusage therefore reads Claude Code's on-disk copy of that response (`~/.claude.json`) as the primary source and calls the live endpoint at most every 15 minutes, backing off 30 minutes on a 429. The last known value is kept across a failed read until it resets, so the line doesn't flicker. Thanks to @jstonge640 for the investigation and original patch.
+- **Pricing for Claude Fable 5.1** — $10.00 / $50.00 input/output per MTok; cache write $12.50 (5m) / $20.00 (1h); cache read $0.25. Previously matched the Fable 5 entry and was priced with Fable 5's $1.00 cache read.
+- **Pricing for Claude Opus 5.5** — $4.00 / $20.00 input/output per MTok; cache write $5.00 (5m) / $8.00 (1h); cache read $0.20. Previously matched the Opus 5 entry ($5 / $25).
+- **Pricing for Claude Sonnet 5.5** — $2.00 / $10.00 input/output per MTok; cache write $2.50 (5m) / $4.00 (1h); cache read $0.10.
+- **Pricing for Claude Haiku 5.5** — two rate cards chosen per request by prompt length (all input tokens, including cache reads and writes): up to 100K tokens $0.10 / $0.50, cache write $0.125 (5m) / $0.20 (1h), cache read $0.01; over 100K tokens $0.50 / $2.50, cache write $0.625 / $1.00, cache read $0.05. Previously fell through to the $3 / $15 default.
+
+### Changed
+- **Claude Sonnet 5 stays at $2.00 / $10.00** — Anthropic made the launch "introductory" rate the standard price and cancelled the increase to $3 / $15 that was scheduled for 2026-09-01. Sonnet 5 usage from 2026-09-01 onward had been priced at the higher rate and is now recalculated at $2 / $10; costs for that period will drop accordingly.
+
+### Fixed
+- **Windows project rows showed an unreadable, identical path instead of the project name** (#7) — `projectDisplayName` split the session's `cwd` on `/` only. A Windows path (`C:\Users\me\Downloads\repos\my-app`) contains no forward slash, so it was treated as a single segment and rendered in full, then clipped with an ellipsis at the *end* — cutting off exactly the folder that identifies the project and leaving every row reading `C:\Users\me\Downloads\repos\...`. Paths are now split on both separators, so the name is the last two segments (`repos/my-app`) on every platform. A path directly under a drive root shows just the folder (`C:\dev` → `dev`).
+
+### Added
+- **Full project path on hover** (#7) — project rows in the Projects tab and session rows in the Sessions tab carry a tooltip with the complete path, so the truncated name can always be resolved to a real directory.
+- **Full path shown under the project name** — the Projects tab lists each project's complete path on a dim second line beneath its name.
+- **Project and session filters now match the full path** — typing any part of a path (`Downloads`, a drive letter, a parent folder) filters on it, not just on the shortened display name.
+
+---
+
 ## [5.1.0] - 2026-08-07
 
 ### Fixed

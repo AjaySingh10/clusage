@@ -45,12 +45,22 @@ async function refreshQuota(): Promise<void> {
         newQuota.sevenDayResetAt = lastQuota.sevenDayResetAt;
       }
     }
+    // Same for model-scoped weekly limits: ~/.claude.json can be mid-rewrite by
+    // the CLI when we read it, so keep the last known values until they reset
+    // rather than letting the line flicker out.
+    if (newQuota && newQuota.modelWeekly.length === 0 && lastQuota?.modelWeekly?.length) {
+      const now = Date.now();
+      newQuota.modelWeekly = lastQuota.modelWeekly.filter(m => !m.resetAt || m.resetAt.getTime() > now);
+    }
     lastQuota = newQuota;
     if (lastQuota) {
       extContext?.globalState.update('lastQuota', {
         ...lastQuota,
         fiveHourResetAt: lastQuota.fiveHourResetAt.toISOString(),
         sevenDayResetAt: lastQuota.sevenDayResetAt.toISOString(),
+        modelWeekly: lastQuota.modelWeekly.map(m => ({
+          ...m, resetAt: m.resetAt ? m.resetAt.toISOString() : null,
+        })),
       });
     }
     if (lastSummary) {
@@ -66,6 +76,7 @@ async function refreshQuota(): Promise<void> {
       const candidates = [
         lastQuota.fiveHourResetAt.getTime(),
         lastQuota.sevenDayResetAt.getTime(),
+        ...lastQuota.modelWeekly.map(m => m.resetAt?.getTime() ?? 0),
       ].filter(t => t > now);
 
       if (candidates.length > 0) {
@@ -107,6 +118,10 @@ export function activate(context: vscode.ExtensionContext): void {
       fiveHourUtilization: fiveHourResetAt.getTime() <= now ? 0 : cachedQuotaRaw.fiveHourUtilization,
       sevenDayUtilization: sevenDayResetAt.getTime() <= now ? 0 : cachedQuotaRaw.sevenDayUtilization,
       sevenDayHeaderPresent: cachedQuotaRaw.sevenDayHeaderPresent ?? true,
+      modelWeekly: (cachedQuotaRaw.modelWeekly ?? []).map((m: any) => {
+        const resetAt = m.resetAt ? new Date(m.resetAt) : null;
+        return { ...m, resetAt, utilization: resetAt && resetAt.getTime() <= now ? 0 : m.utilization };
+      }),
     };
   }
   // Status bar stays on the spinner until refreshUsage() finishes below.

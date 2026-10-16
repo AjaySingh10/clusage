@@ -80,12 +80,13 @@ Four hero cards showing your costs at every time horizon:
 
 ### ⚡ Usage Windows & Live Quota
 
-Three cards showing rolling usage windows - the first two powered by **live Anthropic API rate-limit headers**, the same data shown on `claude.ai/settings/usage`:
+Cards showing rolling usage windows - the first two powered by **live Anthropic API rate-limit headers**, the same data shown on `claude.ai/settings/usage`:
 
 | Card | Data Source |
 |---|---|
 | **Current Session (5h)** | `anthropic-ratelimit-unified-5h-utilization` response header |
 | **Weekly** | `anthropic-ratelimit-unified-7d-utilization` response header |
+| **Weekly *Model*** (e.g. Weekly Fable) | Model-scoped weekly cap from Claude Code's usage data - shown only when your plan has one |
 | **Last Hour** | Computed from local JSONL session data |
 
 Each quota card shows:
@@ -124,7 +125,7 @@ A sortable table of every project you've used Claude Code in, ranked by total sp
 
 ### 🤖 By Model
 
-Per-model cards showing spend, token usage, and request count. Instantly see whether **Claude Opus 4.6** or **Sonnet 4.6** is driving your bill.
+Per-model cards showing spend, token usage, and request count. Instantly see whether **Claude Opus 5.5** or **Sonnet 5.5** is driving your bill.
 
 ---
 
@@ -148,6 +149,7 @@ Claude Code writes a `.jsonl` file for every conversation under `~/.claude/proje
 3. **Computes cost** locally using published Anthropic per-token pricing
 4. **Watches** for new writes with a file-system watcher - refreshes within 500 ms of any Claude Code activity
 5. **Fetches live quota** on startup, ~1 second after any new Claude Code activity, and every 5 minutes as a fallback - makes a 1-token API call to `api.anthropic.com` and reads the `anthropic-ratelimit-*` response headers using the OAuth token already stored in `~/.claude/.credentials.json`
+6. **Reads model-scoped weekly caps** (the "Weekly Fable" line of `/usage`) from Claude Code's cached usage data in `~/.claude.json`, refreshing it live from `api.anthropic.com/api/oauth/usage` at most every 15 minutes - that endpoint is rate-limited, so it backs off for 30 minutes on a 429
 
 The dashboard and status bar stay in sync automatically. No polling loops, no manual refreshes.
 
@@ -205,11 +207,17 @@ Costs are computed locally using these published rates:
 
 | Model | Input | Output | Cache Write (5m) | Cache Read |
 |---|---|---|---|---|
+| Claude Fable 5.1 | $10.00 / MTok | $50.00 / MTok | $12.50 / MTok | $0.25 / MTok |
 | Claude Fable 5 | $10.00 / MTok | $50.00 / MTok | $12.50 / MTok | $1.00 / MTok |
+| Claude Opus 5.5 | $4.00 / MTok | $20.00 / MTok | $5.00 / MTok | $0.20 / MTok |
 | Claude Opus 5 | $5.00 / MTok | $25.00 / MTok | $6.25 / MTok | $0.50 / MTok |
-| Claude Sonnet 5 (intro, through 2026-08-31) | $2.00 / MTok | $10.00 / MTok | $2.50 / MTok | $0.20 / MTok |
-| Claude Sonnet 5 (list, from 2026-09-01) | $3.00 / MTok | $15.00 / MTok | $3.75 / MTok | $0.30 / MTok |
+| Claude Sonnet 5.5 | $2.00 / MTok | $10.00 / MTok | $2.50 / MTok | $0.10 / MTok |
+| Claude Sonnet 5 | $2.00 / MTok | $10.00 / MTok | $2.50 / MTok | $0.20 / MTok |
+| Claude Haiku 5.5 (prompts up to 100K tokens) | $0.10 / MTok | $0.50 / MTok | $0.125 / MTok | $0.01 / MTok |
+| Claude Haiku 5.5 (prompts over 100K tokens) | $0.50 / MTok | $2.50 / MTok | $0.625 / MTok | $0.05 / MTok |
 | Claude Haiku 4.5 | $1.00 / MTok | $5.00 / MTok | $1.25 / MTok | $0.10 / MTok |
+
+1-hour cache writes are priced at 2x the input rate. Haiku 5.5 picks its rate card per request: a prompt counts every input token, including cache reads and writes. Unrecognized models fall back to $3 / $15.
 
 > **Note:** Prices are approximate estimates based on published rates and may not reflect your exact invoice. Always refer to [anthropic.com/pricing](https://www.anthropic.com/pricing) for the latest figures.
 

@@ -18,47 +18,57 @@ export interface UsageRecord {
 }
 
 // Per-million-token prices: [input, output, cacheWrite5m, cacheWrite1h, cacheRead]
-// Only the four currently-accessible models are listed here — everything else
+// Only the currently-accessible models are listed here — everything else
 // (Opus 4.x, Sonnet 4.x, Haiku 3.x, Claude 3.x, ...) has been retired.
-const PRICING_TABLE: Array<[string, number, number, number, number, number]> = [
+// Matched by prefix in order, so a newer point release must come before its
+// base model ("claude-opus-5-5" before "claude-opus-5").
+type Pricing = [number, number, number, number, number];
+const PRICING_TABLE: Array<[string, ...Pricing]> = [
+  // Fable 5.1 - $10 / $50, cache reads 0.025x input
+  ['claude-fable-5-1',  10,    50,  12.50,  20,   0.25],
   // Fable 5 - $10 / $50
   ['claude-fable-5',    10,    50,  12.50,  20,   1.00],
+  // Opus 5.5 - $4 / $20, cache reads 0.05x input
+  ['claude-opus-5-5',    4,    20,   5.00,   8,   0.20],
   // Opus 5 - $5 / $25
   ['claude-opus-5',      5,    25,   6.25,  10,   0.50],
+  // Sonnet 5.5 - $2 / $10, cache reads 0.05x input
+  ['claude-sonnet-5-5',  2,    10,   2.50,   4,   0.10],
+  // Sonnet 5 - $2 / $10 (the launch "introductory" rate became the standard
+  // price; the increase to $3 / $15 scheduled for 2026-09-01 was cancelled)
+  ['claude-sonnet-5',    2,    10,   2.50,   4,   0.20],
   // Haiku 4.5 - $1 / $5
   ['claude-haiku-4-5',   1,     5,   1.25,   2,   0.10],
 ];
-const DEFAULT_PRICING: [number, number, number, number, number] = [3, 15, 3.75, 6, 0.30];
+const DEFAULT_PRICING: Pricing = [3, 15, 3.75, 6, 0.30];
 
-// Sonnet 5 introductory pricing runs through 2026-08-31; list pricing applies from
-// 2026-09-01 onward. Priced by each record's own timestamp, not "now", so historical
-// usage keeps whichever rate was actually in effect when the request was made.
-const SONNET_5_INTRO_CUTOFF = new Date('2026-09-01T00:00:00Z').getTime();
-const SONNET_5_INTRO_PRICING: [number, number, number, number, number] = [2, 10, 2.50, 4, 0.20];
-const SONNET_5_LIST_PRICING: [number, number, number, number, number] = [3, 15, 3.75, 6, 0.30];
+// Haiku 5.5 has two rate cards chosen per request by prompt length: every input
+// token counts toward the threshold, including cache reads and cache writes.
+const HAIKU_5_5_LONG_PROMPT_TOKENS = 100_000;
+const HAIKU_5_5_PRICING: Pricing      = [0.10, 0.50, 0.125, 0.20, 0.01];
+const HAIKU_5_5_LONG_PRICING: Pricing = [0.50, 2.50, 0.625, 1.00, 0.05];
 
-function getPricing(model: string, timestampMs: number): [number, number, number, number, number] {
-  if (model.startsWith('claude-sonnet-5')) {
-    return timestampMs < SONNET_5_INTRO_CUTOFF ? SONNET_5_INTRO_PRICING : SONNET_5_LIST_PRICING;
+function getPricing(model: string, promptTokens: number): Pricing {
+  if (model.startsWith('claude-haiku-5-5')) {
+    return promptTokens > HAIKU_5_5_LONG_PROMPT_TOKENS ? HAIKU_5_5_LONG_PRICING : HAIKU_5_5_PRICING;
   }
-  for (const [prefix, input, output, cacheWrite5m, cacheWrite1h, cacheRead] of PRICING_TABLE) {
-    if (model.startsWith(prefix)) {
-      return [input, output, cacheWrite5m, cacheWrite1h, cacheRead];
-    }
+  for (const [prefix, ...pricing] of PRICING_TABLE) {
+    if (model.startsWith(prefix)) return pricing;
   }
   return DEFAULT_PRICING;
 }
 
 function computeCost(
   model: string,
-  timestampMs: number,
   inputTokens: number,
   outputTokens: number,
   cacheWrite5mTokens: number,
   cacheWrite1hTokens: number,
   cacheReadTokens: number
 ): number {
-  const [inputPrice, outputPrice, cacheWrite5mPrice, cacheWrite1hPrice, cacheReadPrice] = getPricing(model, timestampMs);
+  const [inputPrice, outputPrice, cacheWrite5mPrice, cacheWrite1hPrice, cacheReadPrice] = getPricing(
+    model, inputTokens + cacheWrite5mTokens + cacheWrite1hTokens + cacheReadTokens
+  );
   const M = 1_000_000;
   return (
     (inputTokens        * inputPrice)       / M +
@@ -118,7 +128,7 @@ async function readJsonlFile(filePath: string, projectPath: string): Promise<Usa
       const model: string = msg.model ?? 'unknown';
       const timestamp = new Date(obj.timestamp ?? Date.now());
 
-      const costUSD = computeCost(model, timestamp.getTime(), inputTokens, outputTokens, cacheWrite5mTokens, cacheWrite1hTokens, cacheReadTokens);
+      const costUSD = computeCost(model, inputTokens, outputTokens, cacheWrite5mTokens, cacheWrite1hTokens, cacheReadTokens);
 
       records.push({
         timestamp,

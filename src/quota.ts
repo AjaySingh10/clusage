@@ -12,6 +12,13 @@ export interface QuotaData {
   headersPresent: boolean;       // false = 429 with no headers, utilization inferred
   sevenDayHeaderPresent: boolean; // false = 7d-utilization header was absent in response
   fetchedAt: Date;
+  modelWeekly: ModelWeeklyLimit[]; // model-scoped weekly caps (e.g. "Weekly Fable"), may be empty
+}
+
+export interface ModelWeeklyLimit {
+  modelName: string;             // display name from the API, e.g. "Fable"
+  utilization: number;           // 0.0 – 1.0
+  resetAt: Date | null;
 }
 
 function readToken(): string | null {
@@ -41,10 +48,104 @@ function readToken(): string | null {
   return null;
 }
 
+// Model-scoped weekly limits (the "Weekly Fable" line in Claude Code's /usage
+// panel) are not in the /v1/messages rate-limit headers - only 5h/7d are. They
+// come from GET /api/oauth/usage under `limits[]`, which is heavily rate-limited
+// (the CLI itself refreshes it ~every 30 min). So the primary source is the
+// CLI's on-disk copy of that response in ~/.claude.json, and the live endpoint
+// is hit at most every LIVE_TTL_MS, backing off on 429. Never throws.
+function parseModelWeekly(limits: unknown): ModelWeeklyLimit[] {
+  if (!Array.isArray(limits)) return [];
+  const now = Date.now();
+  return limits
+    .filter((l: any) => l?.group === 'weekly' && typeof l?.scope?.model?.display_name === 'string')
+    .map((l: any) => {
+      const resetAt = l.resets_at ? new Date(l.resets_at) : null;
+      const expired = resetAt !== null && resetAt.getTime() <= now;
+      return {
+        modelName: l.scope.model.display_name,
+        utilization: expired ? 0 : (typeof l.percent === 'number' ? l.percent : 0) / 100,
+        resetAt,
+      };
+    });
+}
+
+function readModelWeeklyFromCache(): ModelWeeklyLimit[] {
+  try {
+    const raw = JSON.parse(fs.readFileSync(path.join(os.homedir(), '.claude.json'), 'utf8'));
+    return parseModelWeekly(raw?.cachedUsageUtilization?.utilization?.limits);
+  } catch {
+    return [];
+  }
+}
+
+const LIVE_TTL_MS = 15 * 60 * 1000;
+const LIVE_BACKOFF_MS = 30 * 60 * 1000;
+let liveUsage: { attemptAt: number; valueAt: number; value: ModelWeeklyLimit[] | null; backoffUntil: number } =
+  { attemptAt: 0, valueAt: 0, value: null, backoffUntil: 0 };
+
+function fetchModelWeekly(token: string): Promise<ModelWeeklyLimit[]> {
+  const cached = readModelWeeklyFromCache();
+  // Prefer a recent live value; otherwise whatever the CLI last cached.
+  const best = (): ModelWeeklyLimit[] =>
+    liveUsage.value && Date.now() - liveUsage.valueAt < LIVE_TTL_MS ? liveUsage.value : cached;
+  const now = Date.now();
+  if (now - liveUsage.attemptAt < LIVE_TTL_MS || now < liveUsage.backoffUntil) {
+    return Promise.resolve(best());
+  }
+
+  return new Promise(resolve => {
+    const fail = (backoff = 0) => {
+      liveUsage.attemptAt = Date.now();
+      liveUsage.backoffUntil = backoff ? Date.now() + backoff : 0;
+      resolve(best());
+    };
+    const req = https.request(
+      {
+        hostname: 'api.anthropic.com',
+        path: '/api/oauth/usage',
+        method: 'GET',
+        headers: {
+          'authorization': `Bearer ${token}`,
+          'anthropic-version': '2023-06-01',
+          'anthropic-beta': 'oauth-2025-04-20',
+          'anthropic-client-platform': 'claude_cli',
+        },
+      },
+      res => {
+        if (res.statusCode !== 200) {
+          res.resume();
+          fail(res.statusCode === 429 ? LIVE_BACKOFF_MS : 0);
+          return;
+        }
+        let data = '';
+        res.on('data', c => data += c);
+        res.on('end', () => {
+          try {
+            const value = parseModelWeekly(JSON.parse(data)?.limits);
+            liveUsage = { attemptAt: Date.now(), valueAt: Date.now(), value, backoffUntil: 0 };
+            resolve(value);
+          } catch {
+            fail();
+          }
+        });
+      }
+    );
+    req.on('error', () => fail());
+    req.setTimeout(10_000, () => { req.destroy(); fail(); });
+    req.end();
+  });
+}
+
 export async function fetchQuota(): Promise<QuotaData | null> {
   const token = readToken();
   if (!token) return null;
 
+  const [quota, modelWeekly] = await Promise.all([fetchUnifiedQuota(token), fetchModelWeekly(token)]);
+  return quota ? { ...quota, modelWeekly } : null;
+}
+
+function fetchUnifiedQuota(token: string): Promise<Omit<QuotaData, 'modelWeekly'> | null> {
   return new Promise(resolve => {
     const body = JSON.stringify({
       model: 'claude-haiku-4-5-20251001',

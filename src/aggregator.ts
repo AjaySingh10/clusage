@@ -81,10 +81,16 @@ export function formatCost(usd: number): string {
   return `$${usd.toFixed(0)}`;
 }
 
+// Claude Code stores the session's `cwd` verbatim, so paths arrive POSIX-style
+// on macOS/Linux and Windows-style ("C:\Users\me\code\app") on Windows. Split on
+// either separator, otherwise a Windows path is treated as one long segment and
+// the whole thing is shown - truncating away the part that names the project.
 function projectDisplayName(projectPath: string): string {
-  const parts = projectPath.split('/').filter(Boolean);
+  const parts = projectPath.split(/[\\/]+/).filter(Boolean);
   if (parts.length === 0) return projectPath;
   if (parts.length === 1) return parts[0];
+  // A bare drive letter ("C:") adds no context, so show the folder alone.
+  if (/^[a-zA-Z]:$/.test(parts[parts.length - 2])) return parts[parts.length - 1];
   // Show last 2 segments: "user/project"
   return parts.slice(-2).join('/');
 }

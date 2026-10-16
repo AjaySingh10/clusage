@@ -26,13 +26,14 @@ interface ClientData {
   lastFiveHours: { cost: number; tokens: number };
   lastWeek: { cost: number; tokens: number };
   byModel: { model: string; costUSD: number; totalTokens: number; requestCount: number }[];
-  byProject: { displayName: string; sessionCount: number; totalTokens: number; costUSD: number }[];
-  recentSessions: { displayName: string; model: string; costUSD: number; totalTokens: number; timestamp: number }[];
+  byProject: { displayName: string; projectPath: string; sessionCount: number; totalTokens: number; costUSD: number }[];
+  recentSessions: { displayName: string; projectPath: string; model: string; costUSD: number; totalTokens: number; timestamp: number }[];
   quota: {
     fiveHourUtilization: number;
     fiveHourResetAt: number;
     sevenDayUtilization: number;
     sevenDayResetAt: number;
+    modelWeekly: { modelName: string; utilization: number; resetAt: number | null }[];
   } | null;
   noAnim: boolean;
 }
@@ -55,10 +56,12 @@ function buildClientData(summary: UsageSummary, quota: QuotaData | null, noAnim:
       model: m.model, costUSD: m.costUSD, totalTokens: m.totalTokens, requestCount: m.requestCount,
     })),
     byProject: summary.byProject.slice(0, 30).map(p => ({
-      displayName: p.displayName, sessionCount: p.sessionCount, totalTokens: p.totalTokens, costUSD: p.costUSD,
+      displayName: p.displayName, projectPath: p.projectPath,
+      sessionCount: p.sessionCount, totalTokens: p.totalTokens, costUSD: p.costUSD,
     })),
     recentSessions: summary.recentSessions.map(s => ({
-      displayName: s.displayName, model: s.model, costUSD: s.costUSD, totalTokens: s.totalTokens,
+      displayName: s.displayName, projectPath: s.projectPath, model: s.model,
+      costUSD: s.costUSD, totalTokens: s.totalTokens,
       timestamp: s.timestamp.getTime(),
     })),
     quota: quota ? {
@@ -66,6 +69,10 @@ function buildClientData(summary: UsageSummary, quota: QuotaData | null, noAnim:
       fiveHourResetAt: quota.fiveHourResetAt.getTime(),
       sevenDayUtilization: quota.sevenDayUtilization,
       sevenDayResetAt: quota.sevenDayResetAt.getTime(),
+      modelWeekly: (quota.modelWeekly ?? []).map(m => ({
+        modelName: m.modelName, utilization: m.utilization,
+        resetAt: m.resetAt ? m.resetAt.getTime() : null,
+      })),
     } : null,
     noAnim,
   };
@@ -212,7 +219,7 @@ body.no-anim, body.no-anim * { animation: none !important; transition: none !imp
 .tbar-fill { height: 100%; border-radius: 2px; transition: width 0.5s ease; }
 
 /* ── Quota ── */
-.quota-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.quota-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
 .quota-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 18px; animation: fadeUp 0.3s ease both; }
 .quota-card-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; }
 .quota-label { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
@@ -261,9 +268,11 @@ body.no-anim, body.no-anim * { animation: none !important; transition: none !imp
 .proj-table td { padding: 10px 14px; font-size: 12px; border-bottom: 1px solid var(--border); }
 .proj-table tr:last-child td { border-bottom: none; }
 .proj-table tr:hover td { background: var(--surface2); }
-.proj-name-cell { display: flex; align-items: center; gap: 8px; }
+.proj-name-cell { display: flex; align-items: center; gap: 8px; cursor: default; }
 .proj-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
-.proj-name-text { font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 300px; }
+.proj-name-col { display: flex; flex-direction: column; gap: 1px; min-width: 0; max-width: 320px; }
+.proj-name-text { font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.proj-path-text { font-size: 10px; color: var(--fg-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .cost-cell { color: var(--green); font-weight: 600; font-variant-numeric: tabular-nums; text-align: right; }
 .share-bar-bg { height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; width: 140px; }
 .share-bar-fill { height: 100%; background: linear-gradient(90deg, var(--orange), #fb923c); border-radius: 2px; }
@@ -275,7 +284,7 @@ body.no-anim, body.no-anim * { animation: none !important; transition: none !imp
 .session-row:last-child { border-bottom: none; }
 .session-row:hover { background: var(--surface2); }
 .sess-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
-.sess-name { font-weight: 500; font-size: 12px; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sess-name { font-weight: 500; font-size: 12px; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: default; }
 .sess-right { display: flex; align-items: center; gap: 16px; flex-shrink: 0; font-size: 12px; }
 .sess-cost { color: var(--green); font-weight: 600; font-variant-numeric: tabular-nums; }
 .sess-tokens { color: var(--muted); font-size: 11px; text-align: right; line-height: 1.3; }
@@ -581,6 +590,18 @@ function quotaGridHtml(data) {
   const sevenPct = quota ? Math.min(quota.sevenDayUtilization * 100, 100) : 0;
   const fiveClass = fivePct >= 90 ? 'danger' : fivePct >= 70 ? 'warn' : 'ok';
   const sevenClass = sevenPct >= 90 ? 'danger' : sevenPct >= 70 ? 'warn' : 'ok';
+  // Model-scoped weekly caps (e.g. "Weekly Fable") - only rendered when the API reports one.
+  const modelCards = (quota && quota.modelWeekly || []).map(m => {
+    const pct = Math.min(m.utilization * 100, 100);
+    const cls = pct >= 90 ? 'danger' : pct >= 70 ? 'warn' : 'ok';
+    return '<div class="quota-card">' +
+      '<div class="quota-card-header"><span class="quota-label">Weekly ' + esc(m.modelName) + '</span><span class="quota-win-label">7D MODEL CAP</span></div>' +
+      '<div class="quota-cost">' + fmtQuotaPct(pct, cls) + '</div>' +
+      '<div class="quota-tokens">' + esc(m.modelName) + ' weekly limit</div>' +
+      '<div class="q-track"><div class="q-fill ' + cls + '" style="width:' + pct + '%"></div></div>' +
+      '<div class="quota-footer"><span>' + (m.resetAt ? timeUntil(m.resetAt) : '') + '</span>' + fmtQuotaPct(pct, cls) + '</div>' +
+    '</div>';
+  }).join('');
 
   return '<div class="quota-card">' +
       '<div class="quota-card-header"><span class="quota-label">Current Session</span><span class="quota-win-label">5H WINDOW</span></div>' +
@@ -596,6 +617,7 @@ function quotaGridHtml(data) {
       (quota ? ('<div class="q-track"><div class="q-fill ' + sevenClass + '" style="width:' + sevenPct + '%"></div></div>' +
         '<div class="quota-footer"><span>' + timeUntil(quota.sevenDayResetAt) + '</span>' + fmtQuotaPct(sevenPct, sevenClass) + '</div>') : '') +
     '</div>' +
+    modelCards +
     '<div class="quota-card">' +
       '<div class="quota-card-header"><span class="quota-label">Last Hour</span><span class="quota-win-label">60M WINDOW</span></div>' +
       '<div class="quota-cost">' + fmtCost(data.lastHour.cost) + '</div>' +
@@ -612,7 +634,7 @@ function sortProjects(key) {
 
 function renderProjects() {
   const q = (document.getElementById('proj-search').value || '').toLowerCase();
-  let rows = PROJECTS.filter(p => p.name.toLowerCase().includes(q));
+  let rows = PROJECTS.filter(p => p.name.toLowerCase().includes(q) || p.path.toLowerCase().includes(q));
   rows.sort((a, b) => {
     let va = a[sortKey], vb = b[sortKey];
     if (sortKey === 'name') { va = va.toLowerCase(); vb = vb.toLowerCase(); }
@@ -621,9 +643,14 @@ function renderProjects() {
   const maxCost = rows.reduce((m, r) => Math.max(m, r.cost), 0.001);
   document.getElementById('proj-tbody').innerHTML = rows.map(p => {
     const w = Math.round((p.cost / maxCost) * 100);
+    const pathLine = p.path && p.path !== p.name
+      ? '<span class="proj-path-text">' + esc(p.path) + '</span>'
+      : '';
     return '<tr>' +
-      '<td><div class="proj-name-cell"><span class="proj-dot" style="background:' + p.color + '"></span>' +
-      '<span class="proj-name-text">' + esc(p.name) + '</span></div></td>' +
+      '<td><div class="proj-name-cell" title="' + esc(p.path) + '">' +
+      '<span class="proj-dot" style="background:' + p.color + '"></span>' +
+      '<div class="proj-name-col"><span class="proj-name-text">' + esc(p.name) + '</span>' +
+      pathLine + '</div></div></td>' +
       '<td class="right muted">' + p.sessions + '</td>' +
       '<td class="right muted">' + p.tokensFmt + '</td>' +
       '<td class="cost-cell">' + p.costFmt + '</td>' +
@@ -644,13 +671,14 @@ function filterSessions(btn) {
 function renderSessions() {
   const q = (document.getElementById('sess-search') ? document.getElementById('sess-search').value : '').toLowerCase();
   const rows = SESSIONS.filter(s =>
-    (sessModel === 'All' || s.model === sessModel) && (!q || s.project.toLowerCase().includes(q))
+    (sessModel === 'All' || s.model === sessModel) &&
+    (!q || s.project.toLowerCase().includes(q) || s.path.toLowerCase().includes(q))
   );
   document.getElementById('sessions-list').innerHTML = rows.length
     ? rows.map(s =>
         '<div class="session-row">' +
         '<span class="sess-dot" style="background:' + s.color + '"></span>' +
-        '<span class="sess-name">' + esc(s.project) + '</span>' +
+        '<span class="sess-name" title="' + esc(s.path) + '">' + esc(s.project) + '</span>' +
         '<span class="tag">' + esc(s.model) + '</span>' +
         '<div class="sess-right">' +
         '<span class="sess-cost">' + s.costFmt + '</span>' +
@@ -696,8 +724,9 @@ function render(data) {
 
   document.getElementById('projects-active-meta').textContent = data.byProject.length + ' active';
   PROJECTS = data.byProject.map(p => ({
-    color: projectColor(p.displayName),
+    color: projectColor(p.projectPath || p.displayName),
     name: p.displayName,
+    path: p.projectPath || p.displayName,
     sessions: p.sessionCount,
     tokens: p.totalTokens,
     tokensFmt: fmtTok(p.totalTokens),
@@ -708,8 +737,9 @@ function render(data) {
 
   document.getElementById('sessions-count-meta').textContent = data.recentSessions.length + ' sessions';
   SESSIONS = data.recentSessions.map(s => ({
-    color: projectColor(s.displayName),
+    color: projectColor(s.projectPath || s.displayName),
     project: s.displayName,
+    path: s.projectPath || s.displayName,
     model: modelShortName(s.model),
     cost: s.costUSD,
     costFmt: fmtCost(s.costUSD),
